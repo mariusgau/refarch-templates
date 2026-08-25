@@ -27,6 +27,13 @@
           {{ t("views.index.backendStatus") }}
           <span :class="backendStatus">{{ backendStatus }}</span>
         </p>
+        <p>
+          <a
+            href="#"
+            @click.prevent="createTheEntity"
+            >TheEntity anlegen</a
+          >
+        </p>
       </v-col>
     </v-row>
   </v-container>
@@ -39,7 +46,11 @@ import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { ApiFactory } from "@/api/ApiFactory.ts";
-import { ActuatorApi } from "@/api/generated/refarch-backend";
+import {
+  ActuatorApi,
+  ResponseError,
+  TheEntityControllerApi,
+} from "@/api/generated/refarch-backend";
 import { checkHealth } from "@/api/healthstate-client";
 import useHasAnyRole from "@/composables/useHasAnyRole";
 import { STATUS_INDICATORS } from "@/constants";
@@ -53,6 +64,27 @@ const isWriter = useHasAnyRole(Role.WRITER);
 const snackbarStore = useSnackbarStore();
 const apiGwStatus = ref("DOWN");
 const backendStatus = ref("DOWN");
+
+async function createTheEntity(): Promise<void> {
+  try {
+    // textAttribute allows 2 to 8 characters.
+    const created = await ApiFactory.getInstance(
+      TheEntityControllerApi
+    ).saveTheEntity({ textAttribute: "PoC" });
+    snackbarStore.push({
+      text: `TheEntity mit der ID ${created.id} wurde angelegt.`,
+      color: STATUS_INDICATORS.SUCCESS,
+    });
+  } catch (error) {
+    snackbarStore.push({
+      text:
+        error instanceof ResponseError
+          ? `${error.response.status} ${error.response.statusText}: ${await error.response.text()}`
+          : String(error),
+      color: STATUS_INDICATORS.ERROR,
+    });
+  }
+}
 
 onMounted(async () => {
   try {
